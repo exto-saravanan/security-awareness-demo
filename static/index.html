@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exto360 · Security Awareness Demo Lab</title>
+  <style>
+    :root {
+      --navy:   #0A1428;
+      --card:   #101F3E;
+      --blue:   #1E88E5;
+      --cyan:   #00BCD4;
+      --grey:   #B0BEC5;
+      --text:   #E0E8F0;
+      --border: #1e3a5f;
+      --dim:    #3a5a7a;
+      --green:  #43A047;
+      --red:    #EF5350;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 2px solid var(--blue);
+      padding: 20px 40px;
+    }
+
+    .header-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .header-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .header-sub {
+      font-size: 12px;
+      color: var(--grey);
+      margin-top: 4px;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 36px 24px 60px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .card.active {
+      border-color: var(--blue);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .card.active:hover { border-color: var(--cyan); }
+
+    .card.inactive { opacity: 0.45; }
+
+    .card-accent {
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--dim);
+    }
+
+    .card.active .card-accent  { background: var(--blue); }
+    .card.s01 .card-accent     { background: var(--grey); }
+
+    .card-num {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--dim);
+      margin-bottom: 6px;
+      padding-left: 10px;
+    }
+
+    .card.active .card-num { color: var(--cyan); }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      padding-left: 10px;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .card-desc {
+      font-size: 11px;
+      color: var(--grey);
+      padding-left: 10px;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-left: 10px;
+    }
+
+    .badge-active      { background: rgba(30,136,229,0.15); color: #90CAF9; border: 1px solid rgba(30,136,229,0.3); }
+    .badge-soon        { background: rgba(176,190,197,0.1);  color: var(--dim); border: 1px solid var(--border); }
+    .badge-no-demo     { background: rgba(176,190,197,0.1);  color: var(--dim); border: 1px solid var(--border); }
+
+    footer {
+      text-align: center;
+      font-size: 10px;
+      color: var(--dim);
+      padding: 20px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-label">Exto360 Engineering · Bi-Weekly Security Awareness Series</div>
+  <div class="header-title">Demo Lab</div>
+  <div class="header-sub">Interactive vulnerability demos — one session at a time</div>
+</header>
+
+<main>
+  <div class="section-label">All Sessions</div>
+  <div class="grid">
+
+    <!-- Session 01 — No demo -->
+    <div class="card s01 inactive">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 01</div>
+      <div class="card-title">Curtain Raiser — The Landscape, The Stakes & The Roadmap</div>
+      <div class="card-desc">Foundational overview session. No interactive demo.</div>
+      <span class="badge badge-no-demo">No Demo</span>
+    </div>
+
+    <!-- Session 02 — Active -->
+    <a class="card active" href="/session/02">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 02</div>
+      <div class="card-title">OWASP A01 — Broken Access Control</div>
+      <div class="card-desc">IDOR · Missing authorization check · Privilege escalation — live with Vulnerable / Fixed toggle.</div>
+      <span class="badge badge-active">Active</span>
+    </a>
+
+    <!-- Sessions 03–08 — Coming Soon -->
+
+    <div class="card inactive">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 03</div>
+      <div class="card-title">OWASP A03 — Injection</div>
+      <div class="card-desc">NoSQL injection · XSS · Input validation</div>
+      <span class="badge badge-soon">Coming Soon</span>
+    </div>
+
+    <div class="card inactive">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 04</div>
+      <div class="card-title">OWASP A06 — Vulnerable Components</div>
+      <div class="card-desc">Packages · Modules · Base images</div>
+      <span class="badge badge-soon">Coming Soon</span>
+    </div>
+
+    <div class="card inactive">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 05</div>
+      <div class="card-title">OWASP A07 — Authentication Failures</div>
+      <div class="card-desc">OAuth flows · Session handling · Credential management</div>
+      <span class="badge badge-soon">Coming Soon</span>
+    </div>
+
+    <div class="card inactive">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 06</div>
+      <div class="card-title">OWASP A10 — SSRF</div>
+      <div class="card-desc">Server-Side Request Forgery · Unvalidated HTTP from backend</div>
+      <span class="badge badge-soon">Coming Soon</span>
+    </div>
+
+    <div class="card inactive">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 07</div>
+      <div class="card-title">Secure Code Review</div>
+      <div class="card-desc">Reading diffs with a security lens</div>
+      <span class="badge badge-soon">Coming Soon</span>
+    </div>
+
+    <div class="card inactive">
+      <div class="card-accent"></div>
+      <div class="card-num">SESSION 08</div>
+      <div class="card-title">Live Vulnerability Triage Exercise</div>
+      <div class="card-desc">Team triage of real findings</div>
+      <span class="badge badge-soon">Coming Soon</span>
+    </div>
+
+  </div>
+</main>
+
+<footer>Exto360 Engineering · Bi-Weekly Security Awareness Series · Demo Lab</footer>
+
+</body>
+</html>
