@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -34,5 +35,9 @@ func main() {
 	r.GET("/session/02", serveHTML("static/s02/index.html"))
 	sessions.NewSession02().Register(r.Group("/session/02/api"))
 
-	r.Run(":8090")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8090"
+	}
+	r.Run(":" + port)
 }
