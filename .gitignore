@@ -1,0 +1,11 @@
+# Binary
+security-awareness-demo
+security-awareness-demo.exe
+
+# Go build cache
+*.test
+*.out
+
+# OS
+.DS_Store
+Thumbs.db

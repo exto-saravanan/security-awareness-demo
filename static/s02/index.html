@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session 02 — Broken Access Control Demo</title>
+  <style>
+    :root {
+      --navy:    #0A1428;
+      --card:    #101F3E;
+      --blue:    #1E88E5;
+      --cyan:    #00BCD4;
+      --red:     #EF5350;
+      --green:   #43A047;
+      --grey:    #B0BEC5;
+      --text:    #E0E8F0;
+      --border:  #1e3a5f;
+      --dim:     #3a5a7a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 2px solid var(--blue);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 16px; }
+
+    .back-btn {
+      font-size: 11px;
+      color: var(--grey);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .back-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    .header-info .title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--blue);
+    }
+
+    .header-info .sub {
+      font-size: 10px;
+      color: var(--grey);
+      margin-top: 2px;
+    }
+
+    .mode-wrap { display: flex; align-items: center; gap: 10px; }
+
+    .mode-label { font-size: 11px; color: var(--grey); }
+
+    #toggle-btn {
+      padding: 8px 22px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+
+    #toggle-btn.vulnerable { background: var(--red);   color: #fff; }
+    #toggle-btn.fixed      { background: var(--green); color: #fff; }
+
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 20px 40px;
+    }
+
+    .login-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .login-label { font-size: 11px; color: var(--grey); white-space: nowrap; }
+
+    .user-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .user-btn {
+      padding: 6px 16px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--grey);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .user-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .user-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+    .user-btn.admin-btn.active { background: var(--cyan); border-color: var(--cyan); color: var(--navy); }
+
+    .current-user { margin-left: auto; font-size: 11px; color: var(--cyan); font-family: 'Courier New', monospace; }
+
+    .scenario {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 18px;
+      overflow: hidden;
+    }
+
+    .scenario-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .s-num { background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 12px; }
+    .s-title { font-size: 13px; font-weight: 700; }
+
+    .vuln-tag {
+      margin-left: auto;
+      font-size: 9px;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .tag-idor    { background: rgba(239,83,80,0.15);  color: #EF9A9A; border: 1px solid rgba(239,83,80,0.3); }
+    .tag-auth    { background: rgba(255,152,0,0.15);  color: #FFCC80; border: 1px solid rgba(255,152,0,0.3); }
+    .tag-privesc { background: rgba(156,39,176,0.15); color: #CE93D8; border: 1px solid rgba(156,39,176,0.3); }
+
+    .scenario-body { padding: 16px 20px; }
+
+    .s-desc { font-size: 11.5px; color: var(--grey); line-height: 1.65; margin-bottom: 14px; }
+
+    .route-badge {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      background: rgba(30,136,229,0.08);
+      border: 1px solid rgba(30,136,229,0.25);
+      color: var(--cyan);
+      padding: 5px 12px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      display: inline-block;
+    }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+
+    .ctrl-label { font-size: 11px; color: var(--grey); }
+
+    .controls input, .controls select {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .controls input { width: 80px; }
+    .controls select { width: 130px; }
+
+    .btn-fire {
+      padding: 7px 18px;
+      background: var(--blue);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-fire:hover { background: #1565c0; }
+
+    .resp-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; min-height: 20px; }
+
+    .status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-family: 'Courier New', monospace; }
+    .status-ok  { background: rgba(67,160,71,0.2);  color: #A5D6A7; }
+    .status-err { background: rgba(239,83,80,0.2);  color: #EF9A9A; }
+
+    .route-hit { font-size: 10px; color: var(--dim); font-family: 'Courier New', monospace; }
+
+    .resp-panel {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      min-height: 56px;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      color: var(--dim);
+      font-style: italic;
+    }
+
+    .resp-panel.ok  { border-left: 3px solid var(--green); color: #A5D6A7; font-style: normal; }
+    .resp-panel.err { border-left: 3px solid var(--red);   color: #EF9A9A; font-style: normal; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 10px;
+      color: var(--dim);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="/">← All Sessions</a>
+    <div class="header-info">
+      <div class="title">Session 02 — Broken Access Control</div>
+      <div class="sub">OWASP A01 · Live Demo</div>
+    </div>
+  </div>
+  <div class="mode-wrap">
+    <span class="mode-label">Mode:</span>
+    <button id="toggle-btn" class="vulnerable" onclick="toggleMode()">⚠ VULNERABLE</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="login-panel">
+    <span class="login-label">Simulating as:</span>
+    <div class="user-btns">
+      <button class="user-btn active"    onclick="setUser(1, this)" data-label="Alice (ID:1 · engineer)">Alice — Engineer</button>
+      <button class="user-btn"           onclick="setUser(2, this)" data-label="Bob (ID:2 · engineer)">Bob — Engineer</button>
+      <button class="user-btn admin-btn" onclick="setUser(3, this)" data-label="Carol (ID:3 · admin)">Carol — Admin</button>
+    </div>
+    <span class="current-user" id="user-label">X-User-ID: 1 · Alice · engineer</span>
+  </div>
+
+  <!-- Scenario 01 — IDOR -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">01</span>
+      <span class="s-title">Insecure Direct Object Reference (IDOR)</span>
+      <span class="vuln-tag tag-idor">IDOR</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc">The profile endpoint returns any user's full record — including salary — just by changing the ID in the URL. No ownership check. Swap the number, read anyone's data.</p>
+      <div class="route-badge">GET /session/02/api/users/<span id="s1-id-preview">2</span>/profile</div>
+      <div class="controls">
+        <span class="ctrl-label">Target User ID:</span>
+        <input type="number" id="s1-target" value="2" min="1" max="3"
+               oninput="document.getElementById('s1-id-preview').textContent=this.value">
+        <button class="btn-fire" onclick="run1()">Send Request</button>
+      </div>
+      <div class="resp-meta" id="s1-meta">
+        <span class="status-badge" id="s1-status"></span>
+        <span class="route-hit"    id="s1-route"></span>
+      </div>
+      <div class="resp-panel" id="s1-resp">Response will appear here...</div>
+    </div>
+  </div>
+
+  <!-- Scenario 02 — Missing Auth -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">02</span>
+      <span class="s-title">Missing Authorization Check</span>
+      <span class="vuln-tag tag-auth">MISSING AUTH</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc">The admin reports endpoint checks that you are logged in — but never checks your role. Authentication ≠ Authorization. Any engineer can read confidential incident data.</p>
+      <div class="route-badge">GET /session/02/api/admin/reports</div>
+      <div class="controls">
+        <button class="btn-fire" onclick="run2()">Send Request</button>
+      </div>
+      <div class="resp-meta" id="s2-meta">
+        <span class="status-badge" id="s2-status"></span>
+        <span class="route-hit"    id="s2-route"></span>
+      </div>
+      <div class="resp-panel" id="s2-resp">Response will appear here...</div>
+    </div>
+  </div>
+
+  <!-- Scenario 03 — Privilege Escalation -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">03</span>
+      <span class="s-title">Privilege Escalation — Role Takeover</span>
+      <span class="vuln-tag tag-privesc">PRIV ESC</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc">The role-update endpoint never checks if the caller has the authority to change roles. Any user can promote themselves to admin via an unguarded PUT.</p>
+      <div class="route-badge">PUT /session/02/api/users/<span id="s3-id-preview">1</span>/role</div>
+      <div class="controls">
+        <span class="ctrl-label">Target User ID:</span>
+        <input type="number" id="s3-target" value="1" min="1" max="3"
+               oninput="document.getElementById('s3-id-preview').textContent=this.value">
+        <span class="ctrl-label">New Role:</span>
+        <select id="s3-role">
+          <option value="admin">admin</option>
+          <option value="superadmin">superadmin</option>
+          <option value="engineer" selected>engineer</option>
+        </select>
+        <button class="btn-fire" onclick="run3()">Send Request</button>
+      </div>
+      <div class="resp-meta" id="s3-meta">
+        <span class="status-badge" id="s3-status"></span>
+        <span class="route-hit"    id="s3-route"></span>
+      </div>
+      <div class="resp-panel" id="s3-resp">Response will appear here...</div>
+    </div>
+  </div>
+
+</main>
+
+<footer>Exto360 Engineering · Bi-Weekly Security Awareness Series · Session 02 of 8 · Demo Environment</footer>
+
+<script>
+  const BASE = '/session/02/api';
+  let uid = 1;
+
+  function hdrs() {
+    return { 'X-User-ID': String(uid), 'Content-Type': 'application/json' };
+  }
+
+  function setUser(id, btn) {
+    uid = id;
+    document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('user-label').textContent = `X-User-ID: ${btn.dataset.label}`;
+  }
+
+  async function toggleMode() {
+    const res  = await fetch(`${BASE}/mode`, { method: 'POST' });
+    const data = await res.json();
+    const btn  = document.getElementById('toggle-btn');
+    if (data.mode === 'vulnerable') {
+      btn.textContent = '⚠ VULNERABLE'; btn.className = 'vulnerable';
+    } else {
+      btn.textContent = '✓ FIXED'; btn.className = 'fixed';
+    }
+    ['s1','s2','s3'].forEach(p => {
+      document.getElementById(`${p}-resp`).textContent = 'Response will appear here...';
+      document.getElementById(`${p}-resp`).className   = 'resp-panel';
+      document.getElementById(`${p}-status`).textContent = '';
+      document.getElementById(`${p}-route`).textContent  = '';
+    });
+  }
+
+  function render(prefix, status, data, route) {
+    const ok    = status >= 200 && status < 300;
+    const panel = document.getElementById(`${prefix}-resp`);
+    const badge = document.getElementById(`${prefix}-status`);
+    const rte   = document.getElementById(`${prefix}-route`);
+    panel.textContent = JSON.stringify(data, null, 2);
+    panel.className   = `resp-panel ${ok ? 'ok' : 'err'}`;
+    badge.textContent = `HTTP ${status}`;
+    badge.className   = `status-badge ${ok ? 'status-ok' : 'status-err'}`;
+    rte.textContent   = route;
+  }
+
+  async function run1() {
+    const id  = document.getElementById('s1-target').value;
+    const res = await fetch(`${BASE}/users/${id}/profile`, { headers: hdrs() });
+    render('s1', res.status, await res.json(), `GET /session/02/api/users/${id}/profile`);
+  }
+
+  async function run2() {
+    const res = await fetch(`${BASE}/admin/reports`, { headers: hdrs() });
+    render('s2', res.status, await res.json(), 'GET /session/02/api/admin/reports');
+  }
+
+  async function run3() {
+    const id   = document.getElementById('s3-target').value;
+    const role = document.getElementById('s3-role').value;
+    const res  = await fetch(`${BASE}/users/${id}/role`, {
+      method: 'PUT', headers: hdrs(), body: JSON.stringify({ role }),
+    });
+    render('s3', res.status, await res.json(), `PUT /session/02/api/users/${id}/role`);
+  }
+</script>
+
+</body>
+</html>
