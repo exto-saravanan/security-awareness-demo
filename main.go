@@ -35,6 +35,10 @@ func main() {
 	r.GET("/session/02", serveHTML("static/s02/index.html"))
 	sessions.NewSession02().Register(r.Group("/session/02/api"))
 
+	// ── Session 03 — Injection ────────────────────────────────────────────────
+	r.GET("/session/03", serveHTML("static/s03/index.html"))
+	sessions.NewSession03().Register(r.Group("/session/03/api"))
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8090"

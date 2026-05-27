@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session 03 — Injection Demo</title>
+  <style>
+    :root {
+      --navy:    #0A1428;
+      --card:    #101F3E;
+      --blue:    #1E88E5;
+      --cyan:    #00BCD4;
+      --yellow:  #FFD600;
+      --red:     #EF5350;
+      --green:   #43A047;
+      --orange:  #FF9800;
+      --grey:    #B0BEC5;
+      --text:    #E0E8F0;
+      --border:  #1e3a5f;
+      --dim:     #3a5a7a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 2px solid var(--yellow);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 16px; }
+
+    .back-btn {
+      font-size: 11px;
+      color: var(--grey);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .back-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+
+    .header-info .title { font-size: 14px; font-weight: 700; color: var(--yellow); }
+    .header-info .sub   { font-size: 10px; color: var(--grey); margin-top: 2px; }
+
+    .mode-wrap { display: flex; align-items: center; gap: 10px; }
+    .mode-label { font-size: 11px; color: var(--grey); }
+
+    #toggle-btn {
+      padding: 8px 22px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    #toggle-btn.vulnerable { background: var(--red);   color: #fff; }
+    #toggle-btn.fixed      { background: var(--green); color: #fff; }
+
+    main { max-width: 960px; margin: 0 auto; padding: 24px 20px 40px; }
+
+    /* XSS execution banner */
+    #xss-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: rgba(239,83,80,0.15);
+      border: 1px solid var(--red);
+      border-left: 4px solid var(--red);
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      animation: pulse 1s ease-in-out;
+    }
+    @keyframes pulse {
+      0%   { opacity: 0; transform: translateY(-4px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    #xss-banner .banner-icon  { font-size: 20px; }
+    #xss-banner .banner-text  { font-size: 12px; color: #EF9A9A; line-height: 1.5; }
+    #xss-banner .banner-title { font-weight: 700; font-size: 13px; color: var(--red); }
+    #xss-banner .dismiss      { margin-left: auto; font-size: 10px; color: var(--dim); cursor: pointer; border: 1px solid var(--border); padding: 3px 10px; border-radius: 4px; }
+    #xss-banner .dismiss:hover { color: var(--grey); }
+
+    .scenario {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 18px;
+      overflow: hidden;
+    }
+
+    .scenario-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .s-num { background: var(--yellow); color: var(--navy); font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 12px; }
+    .s-title { font-size: 13px; font-weight: 700; }
+
+    .vuln-tag {
+      margin-left: auto;
+      font-size: 9px;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+    .tag-nosql { background: rgba(239,83,80,0.15);  color: #EF9A9A; border: 1px solid rgba(239,83,80,0.3); }
+    .tag-xss   { background: rgba(255,152,0,0.15);  color: #FFCC80; border: 1px solid rgba(255,152,0,0.3); }
+    .tag-valid { background: rgba(255,214,0,0.12);  color: #FFF59D; border: 1px solid rgba(255,214,0,0.3); }
+
+    .scenario-body { padding: 16px 20px; }
+
+    .s-desc { font-size: 11.5px; color: var(--grey); line-height: 1.65; margin-bottom: 14px; }
+
+    .route-badge {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      background: rgba(255,214,0,0.06);
+      border: 1px solid rgba(255,214,0,0.2);
+      color: var(--yellow);
+      padding: 5px 12px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      display: inline-block;
+    }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .ctrl-label { font-size: 11px; color: var(--grey); white-space: nowrap; }
+
+    .controls input, .controls textarea, .controls select {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+    }
+    .controls input        { width: 160px; }
+    .controls input.short  { width: 80px; }
+    .controls textarea     { width: 340px; height: 48px; resize: vertical; }
+
+    .preset-btns { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+
+    .preset-btn {
+      font-size: 10px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--grey);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover         { border-color: var(--yellow); color: var(--yellow); }
+    .preset-btn.preset-safe   { border-color: rgba(67,160,71,0.4);  color: #A5D6A7; }
+    .preset-btn.preset-inject { border-color: rgba(239,83,80,0.4);  color: #EF9A9A; }
+    .preset-btn.active        { background: rgba(255,214,0,0.1); border-color: var(--yellow); color: var(--yellow); }
+
+    .btn-fire, .btn-load, .btn-reset {
+      padding: 7px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-fire  { background: var(--yellow); color: var(--navy); }
+    .btn-fire:hover  { background: #c8a600; }
+    .btn-load  { background: var(--blue); color: #fff; }
+    .btn-load:hover  { background: #1565c0; }
+    .btn-reset { background: transparent; color: var(--dim); border: 1px solid var(--border); }
+    .btn-reset:hover { color: var(--grey); border-color: var(--grey); }
+
+    .resp-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; min-height: 20px; }
+    .status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-family: 'Courier New', monospace; }
+    .status-ok    { background: rgba(67,160,71,0.2);  color: #A5D6A7; }
+    .status-err   { background: rgba(239,83,80,0.2);  color: #EF9A9A; }
+    .route-hit    { font-size: 10px; color: var(--dim); font-family: 'Courier New', monospace; }
+
+    .resp-panel {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      min-height: 56px;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      color: var(--dim);
+      font-style: italic;
+    }
+    .resp-panel.ok  { border-left: 3px solid var(--green); color: #A5D6A7; font-style: normal; }
+    .resp-panel.err { border-left: 3px solid var(--red);   color: #EF9A9A; font-style: normal; }
+
+    /* XSS comments area */
+    .comments-area {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      min-height: 60px;
+      margin-top: 10px;
+    }
+    .comments-label {
+      font-size: 10px;
+      color: var(--dim);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 8px;
+    }
+    .comment-item {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .comment-item:last-child { border-bottom: none; }
+    .comment-author { color: var(--cyan); font-weight: 600; margin-right: 6px; }
+    .comment-content { color: var(--text); }
+    .no-comments { color: var(--dim); font-style: italic; font-size: 11px; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 10px;
+      color: var(--dim);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="/">← All Sessions</a>
+    <div class="header-info">
+      <div class="title">Session 03 — Injection</div>
+      <div class="sub">OWASP A03 · Live Demo</div>
+    </div>
+  </div>
+  <div class="mode-wrap">
+    <span class="mode-label">Mode:</span>
+    <button id="toggle-btn" class="vulnerable" onclick="toggleMode()">⚠ VULNERABLE</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- XSS Execution Banner -->
+  <div id="xss-banner">
+    <span class="banner-icon">⚡</span>
+    <div class="banner-text">
+      <div class="banner-title">XSS Executed — Script ran in your browser</div>
+      The injected payload fired. In a real attack this code would steal session cookies, redirect the page, or exfiltrate data — without any user interaction beyond loading the page.
+    </div>
+    <span class="dismiss" onclick="document.getElementById('xss-banner').style.display='none'">Dismiss</span>
+  </div>
+
+  <!-- Scenario 01 — NoSQL Injection -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">01</span>
+      <span class="s-title">NoSQL Injection — Login Bypass</span>
+      <span class="vuln-tag tag-nosql">NOSQL INJECTION</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc">The login handler deserialises the request body without validating field types. Sending <code>{"$gt": ""}</code> as the password — a MongoDB comparison operator — bypasses the credential check entirely. No password needed.</p>
+      <div class="route-badge">POST /session/03/api/login</div>
+
+      <div class="preset-btns">
+        <span class="ctrl-label">Presets:</span>
+        <button class="preset-btn preset-safe"   onclick="s1Preset('normal')">Normal Login</button>
+        <button class="preset-btn preset-inject" onclick="s1Preset('inject')">Operator Injection</button>
+      </div>
+
+      <div class="controls">
+        <span class="ctrl-label">Username:</span>
+        <input type="text" id="s1-user" value="admin">
+        <span class="ctrl-label">Password:</span>
+        <input type="text" id="s1-pass" value="wrongpassword">
+      </div>
+      <div id="s1-payload-hint" style="font-size:10px; color:var(--dim); margin-bottom:10px; font-family:'Courier New',monospace;"></div>
+
+      <div class="controls">
+        <button class="btn-fire" onclick="run1()">Send Login Request</button>
+      </div>
+
+      <div class="resp-meta" id="s1-meta">
+        <span class="status-badge" id="s1-status"></span>
+        <span class="route-hit"    id="s1-route"></span>
+      </div>
+      <div class="resp-panel" id="s1-resp">Response will appear here...</div>
+    </div>
+  </div>
+
+  <!-- Scenario 02 — Stored XSS -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">02</span>
+      <span class="s-title">Stored XSS — Script Injection via Comments</span>
+      <span class="vuln-tag tag-xss">STORED XSS</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc">The comments system stores user input as-is and returns it without HTML encoding. In vulnerable mode the content is rendered via <code>innerHTML</code> — any injected script or event handler executes in the browser. In fixed mode the server HTML-encodes output before returning it.</p>
+      <div class="route-badge">POST /session/03/api/comments &nbsp;·&nbsp; GET /session/03/api/comments</div>
+
+      <div class="preset-btns">
+        <span class="ctrl-label">Presets:</span>
+        <button class="preset-btn preset-safe"   onclick="s2Preset('normal')">Normal Comment</button>
+        <button class="preset-btn preset-inject" onclick="s2Preset('xss')">XSS Payload</button>
+      </div>
+
+      <div class="controls">
+        <span class="ctrl-label">Author:</span>
+        <input type="text" id="s2-author" value="attacker">
+        <span class="ctrl-label">Comment:</span>
+        <textarea id="s2-content">Great writeup!</textarea>
+      </div>
+
+      <div class="controls">
+        <button class="btn-fire" onclick="postComment()">Post Comment</button>
+        <button class="btn-load" onclick="loadComments()">Load Comments</button>
+        <button class="btn-reset" onclick="resetComments()">Reset</button>
+      </div>
+
+      <div class="resp-meta" id="s2-meta">
+        <span class="status-badge" id="s2-status"></span>
+        <span class="route-hit"    id="s2-route"></span>
+      </div>
+      <div class="resp-panel" id="s2-resp" style="margin-bottom:10px;">Response will appear here...</div>
+
+      <hr class="divider">
+      <div class="comments-label">Rendered comments (innerHTML):</div>
+      <div class="comments-area" id="comments-display">
+        <span class="no-comments">Click "Load Comments" to fetch and render.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 03 — Input Validation -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">03</span>
+      <span class="s-title">Input Validation Bypass — Unvalidated Fields</span>
+      <span class="vuln-tag tag-valid">INPUT VALIDATION</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc">The registration endpoint accepts whatever arrives — operator objects as usernames, negative ages, and malformed email addresses. In fixed mode, every field is validated for type, length, range, and format before processing.</p>
+      <div class="route-badge">POST /session/03/api/register</div>
+
+      <div class="preset-btns">
+        <span class="ctrl-label">Presets:</span>
+        <button class="preset-btn preset-safe"   onclick="s3Preset('valid')">Valid Input</button>
+        <button class="preset-btn preset-inject" onclick="s3Preset('invalid')">Invalid Input</button>
+        <button class="preset-btn preset-inject" onclick="s3Preset('operator')">Operator as Username</button>
+      </div>
+
+      <div class="controls">
+        <span class="ctrl-label">Username:</span>
+        <input type="text" id="s3-user" value="alice">
+        <span class="ctrl-label">Age:</span>
+        <input type="text" id="s3-age" value="25" class="short">
+        <span class="ctrl-label">Email:</span>
+        <input type="text" id="s3-email" value="alice@exto360.com">
+      </div>
+      <div id="s3-payload-hint" style="font-size:10px; color:var(--dim); margin-bottom:10px; font-family:'Courier New',monospace;"></div>
+
+      <div class="controls">
+        <button class="btn-fire" onclick="run3()">Register</button>
+      </div>
+
+      <div class="resp-meta" id="s3-meta">
+        <span class="status-badge" id="s3-status"></span>
+        <span class="route-hit"    id="s3-route"></span>
+      </div>
+      <div class="resp-panel" id="s3-resp">Response will appear here...</div>
+    </div>
+  </div>
+
+</main>
+
+<footer>Exto360 Engineering · Bi-Weekly Security Awareness Series · Session 03 of 8 · Demo Environment</footer>
+
+<script>
+  const BASE = '/session/03/api';
+  let s1InjectOperator = false;
+  let s3InjectOperator = false;
+
+  // ── Mode ────────────────────────────────────────────────────────────────────
+
+  async function toggleMode() {
+    const res  = await fetch(`${BASE}/mode`, { method: 'POST' });
+    const data = await res.json();
+    const btn  = document.getElementById('toggle-btn');
+    if (data.mode === 'vulnerable') {
+      btn.textContent = '⚠ VULNERABLE'; btn.className = 'vulnerable';
+    } else {
+      btn.textContent = '✓ FIXED'; btn.className = 'fixed';
+    }
+    // Clear all panels
+    ['s1','s2','s3'].forEach(p => {
+      document.getElementById(`${p}-resp`).textContent   = 'Response will appear here...';
+      document.getElementById(`${p}-resp`).className     = 'resp-panel';
+      document.getElementById(`${p}-status`).textContent = '';
+      document.getElementById(`${p}-route`).textContent  = '';
+    });
+    document.getElementById('comments-display').innerHTML =
+      '<span class="no-comments">Click "Load Comments" to fetch and render.</span>';
+    document.getElementById('xss-banner').style.display = 'none';
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  function render(prefix, status, data, route) {
+    const ok    = status >= 200 && status < 300;
+    const panel = document.getElementById(`${prefix}-resp`);
+    const badge = document.getElementById(`${prefix}-status`);
+    const rte   = document.getElementById(`${prefix}-route`);
+    panel.textContent = JSON.stringify(data, null, 2);
+    panel.className   = `resp-panel ${ok ? 'ok' : 'err'}`;
+    badge.textContent = `HTTP ${status}`;
+    badge.className   = `status-badge ${ok ? 'status-ok' : 'status-err'}`;
+    rte.textContent   = route;
+  }
+
+  // ── Scenario 01 — NoSQL Injection ───────────────────────────────────────────
+
+  function s1Preset(type) {
+    const hint = document.getElementById('s1-payload-hint');
+    if (type === 'normal') {
+      document.getElementById('s1-user').value = 'alice';
+      document.getElementById('s1-pass').value = 'pass123';
+      s1InjectOperator = false;
+      hint.textContent = '';
+    } else {
+      document.getElementById('s1-user').value = 'admin';
+      document.getElementById('s1-pass').value = '{"$gt": ""}';
+      s1InjectOperator = true;
+      hint.textContent = 'Payload: password field will be sent as {"$gt": ""} — a MongoDB operator object, not a string';
+      hint.style.color = 'var(--red)';
+    }
+  }
+
+  async function run1() {
+    const username = document.getElementById('s1-user').value;
+    const password = s1InjectOperator ? {"$gt": ""} : document.getElementById('s1-pass').value;
+    const res = await fetch(`${BASE}/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username, password }),
+    });
+    render('s1', res.status, await res.json(), 'POST /session/03/api/login');
+  }
+
+  // ── Scenario 02 — Stored XSS ────────────────────────────────────────────────
+
+  function s2Preset(type) {
+    if (type === 'normal') {
+      document.getElementById('s2-author').value  = 'alice';
+      document.getElementById('s2-content').value = 'Really enjoyed the session — the IDOR demo was eye-opening.';
+    } else {
+      document.getElementById('s2-author').value  = 'attacker';
+      document.getElementById('s2-content').value =
+        `<img src=x onerror="document.getElementById('xss-banner').style.display='flex'">`;
+    }
+  }
+
+  async function postComment() {
+    const author  = document.getElementById('s2-author').value;
+    const content = document.getElementById('s2-content').value;
+    const res = await fetch(`${BASE}/comments`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ author, content }),
+    });
+    render('s2', res.status, await res.json(), 'POST /session/03/api/comments');
+  }
+
+  async function loadComments() {
+    const res  = await fetch(`${BASE}/comments`);
+    const data = await res.json();
+
+    document.getElementById('s2-status').textContent = `HTTP ${res.status}`;
+    document.getElementById('s2-status').className   = 'status-badge status-ok';
+    document.getElementById('s2-route').textContent  = 'GET /session/03/api/comments';
+
+    const display = document.getElementById('comments-display');
+    const comments = data.comments || [];
+    if (comments.length === 0) {
+      display.innerHTML = '<span class="no-comments">No comments yet.</span>';
+      return;
+    }
+    // Deliberately use innerHTML to demonstrate XSS
+    display.innerHTML = comments.map(c =>
+      `<div class="comment-item">
+        <span class="comment-author">${c.author}:</span>
+        <span class="comment-content">${c.content}</span>
+      </div>`
+    ).join('');
+  }
+
+  async function resetComments() {
+    await fetch(`${BASE}/mode`, { method: 'POST' });
+    await fetch(`${BASE}/mode`, { method: 'POST' });
+    document.getElementById('comments-display').innerHTML =
+      '<span class="no-comments">Click "Load Comments" to fetch and render.</span>';
+    document.getElementById('xss-banner').style.display = 'none';
+    ['s2'].forEach(p => {
+      document.getElementById(`${p}-resp`).textContent   = 'Response will appear here...';
+      document.getElementById(`${p}-resp`).className     = 'resp-panel';
+      document.getElementById(`${p}-status`).textContent = '';
+      document.getElementById(`${p}-route`).textContent  = '';
+    });
+  }
+
+  // ── Scenario 03 — Input Validation ──────────────────────────────────────────
+
+  function s3Preset(type) {
+    const hint = document.getElementById('s3-payload-hint');
+    s3InjectOperator = false;
+    hint.textContent = '';
+    if (type === 'valid') {
+      document.getElementById('s3-user').value  = 'alice';
+      document.getElementById('s3-age').value   = '25';
+      document.getElementById('s3-email').value = 'alice@exto360.com';
+    } else if (type === 'invalid') {
+      document.getElementById('s3-user').value  = 'alice';
+      document.getElementById('s3-age').value   = '-999';
+      document.getElementById('s3-email').value = 'not-an-email';
+      hint.textContent = 'Sending: age=-999 (out of range), email="not-an-email" (invalid format)';
+      hint.style.color = 'var(--orange)';
+    } else if (type === 'operator') {
+      document.getElementById('s3-user').value  = '{"$gt": ""}';
+      document.getElementById('s3-age').value   = '25';
+      document.getElementById('s3-email').value = 'alice@exto360.com';
+      s3InjectOperator = true;
+      hint.textContent = 'Payload: username will be sent as {"$gt": ""} — a JSON operator object, not a string';
+      hint.style.color = 'var(--red)';
+    }
+  }
+
+  async function run3() {
+    const username = s3InjectOperator
+      ? {"$gt": ""}
+      : document.getElementById('s3-user').value;
+    const ageRaw   = document.getElementById('s3-age').value;
+    const age      = isNaN(Number(ageRaw)) ? ageRaw : Number(ageRaw);
+    const email    = document.getElementById('s3-email').value;
+
+    const res = await fetch(`${BASE}/register`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username, age, email }),
+    });
+    render('s3', res.status, await res.json(), 'POST /session/03/api/register');
+  }
+</script>
+
+</body>
+</html>
