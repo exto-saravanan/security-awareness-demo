@@ -295,8 +295,8 @@
 
       <div class="preset-btns">
         <span class="ctrl-label">Presets:</span>
-        <button class="preset-btn preset-safe"   onclick="s1Preset('normal')">Normal Login</button>
-        <button class="preset-btn preset-inject" onclick="s1Preset('inject')">Operator Injection</button>
+        <button class="preset-btn preset-safe"   onclick="s1Preset('normal', this)">Normal Login</button>
+        <button class="preset-btn preset-inject" onclick="s1Preset('inject', this)">Operator Injection</button>
       </div>
 
       <div class="controls">
@@ -332,8 +332,8 @@
 
       <div class="preset-btns">
         <span class="ctrl-label">Presets:</span>
-        <button class="preset-btn preset-safe"   onclick="s2Preset('normal')">Normal Comment</button>
-        <button class="preset-btn preset-inject" onclick="s2Preset('xss')">XSS Payload</button>
+        <button class="preset-btn preset-safe"   onclick="s2Preset('normal', this)">Normal Comment</button>
+        <button class="preset-btn preset-inject" onclick="s2Preset('xss', this)">XSS Payload</button>
       </div>
 
       <div class="controls">
@@ -376,9 +376,9 @@
 
       <div class="preset-btns">
         <span class="ctrl-label">Presets:</span>
-        <button class="preset-btn preset-safe"   onclick="s3Preset('valid')">Valid Input</button>
-        <button class="preset-btn preset-inject" onclick="s3Preset('invalid')">Invalid Input</button>
-        <button class="preset-btn preset-inject" onclick="s3Preset('operator')">Operator as Username</button>
+        <button class="preset-btn preset-safe"   onclick="s3Preset('valid', this)">Valid Input</button>
+        <button class="preset-btn preset-inject" onclick="s3Preset('invalid', this)">Invalid Input</button>
+        <button class="preset-btn preset-inject" onclick="s3Preset('operator', this)">Operator as Username</button>
       </div>
 
       <div class="controls">
@@ -467,7 +467,9 @@
 
   // ── Scenario 01 — NoSQL Injection ───────────────────────────────────────────
 
-  function s1Preset(type) {
+  function s1Preset(type, btn) {
+    btn.closest('.preset-btns').querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     const hint = document.getElementById('s1-payload-hint');
     if (type === 'normal') {
       document.getElementById('s1-user').value = 'alice';
@@ -496,7 +498,9 @@
 
   // ── Scenario 02 — Stored XSS ────────────────────────────────────────────────
 
-  function s2Preset(type) {
+  function s2Preset(type, btn) {
+    btn.closest('.preset-btns').querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     if (type === 'normal') {
       document.getElementById('s2-author').value  = 'alice';
       document.getElementById('s2-content').value = 'Really enjoyed the session — the IDOR demo was eye-opening.';
@@ -557,7 +561,9 @@
 
   // ── Scenario 03 — Input Validation ──────────────────────────────────────────
 
-  function s3Preset(type) {
+  function s3Preset(type, btn) {
+    btn.closest('.preset-btns').querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     const hint = document.getElementById('s3-payload-hint');
     s3InjectOperator = false;
     hint.textContent = '';
