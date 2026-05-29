@@ -272,7 +272,7 @@
       <span class="vuln-tag tag-idor">IDOR</span>
     </div>
     <div class="scenario-body">
-      <p class="s-desc">The profile endpoint returns any user's full record — including salary — just by changing the ID in the URL. No ownership check. Swap the number, read anyone's data.</p>
+      <p class="s-desc" id="s1-desc">The profile endpoint returns any user's full record — including salary — just by changing the ID in the URL. No ownership check. Swap the number, read anyone's data.</p>
       <div class="route-badge">GET /session/02/api/users/<span id="s1-id-preview">2</span>/profile</div>
       <div class="controls">
         <span class="ctrl-label">Target User ID:</span>
@@ -296,7 +296,7 @@
       <span class="vuln-tag tag-auth">MISSING AUTH</span>
     </div>
     <div class="scenario-body">
-      <p class="s-desc">The admin reports endpoint checks that you are logged in — but never checks your role. Authentication ≠ Authorization. Any engineer can read confidential incident data.</p>
+      <p class="s-desc" id="s2-desc">The admin reports endpoint checks that you are logged in — but never checks your role. Authentication ≠ Authorization. Any engineer can read confidential incident data.</p>
       <div class="route-badge">GET /session/02/api/admin/reports</div>
       <div class="controls">
         <button class="btn-fire" onclick="run2()">Send Request</button>
@@ -317,7 +317,7 @@
       <span class="vuln-tag tag-privesc">PRIV ESC</span>
     </div>
     <div class="scenario-body">
-      <p class="s-desc">The role-update endpoint never checks if the caller has the authority to change roles. Any user can promote themselves to admin via an unguarded PUT.</p>
+      <p class="s-desc" id="s3-desc">The role-update endpoint never checks if the caller has the authority to change roles. Any user can promote themselves to admin via an unguarded PUT.</p>
       <div class="route-badge">PUT /session/02/api/users/<span id="s3-id-preview">1</span>/role</div>
       <div class="controls">
         <span class="ctrl-label">Target User ID:</span>
@@ -347,6 +347,19 @@
   const BASE = '/session/02/api';
   let uid = 1;
 
+  const DESCS = {
+    vulnerable: {
+      's1-desc': 'The profile endpoint returns any user\'s full record — including salary — just by changing the ID in the URL. No ownership check. Swap the number, read anyone\'s data.',
+      's2-desc': 'The admin reports endpoint checks that you are logged in — but never checks your role. Authentication ≠ Authorization. Any engineer can read confidential incident data.',
+      's3-desc': 'The role-update endpoint never checks if the caller has the authority to change roles. Any user can promote themselves to admin via an unguarded PUT.',
+    },
+    fixed: {
+      's1-desc': 'Ownership check enforced — the handler verifies the requester\'s ID matches the target ID, or the requester holds the admin role. Cross-user access returns 403.',
+      's2-desc': 'Role check enforced — the handler verifies the caller\'s role is admin before returning any data. An authenticated engineer is still denied with 403.',
+      's3-desc': 'Caller role check enforced — only an admin can invoke the role-update endpoint. Any non-admin attempting a role change receives 403.',
+    },
+  };
+
   function hdrs() {
     return { 'X-User-ID': String(uid), 'Content-Type': 'application/json' };
   }
@@ -367,6 +380,9 @@
     } else {
       btn.textContent = '✓ FIXED'; btn.className = 'fixed';
     }
+    Object.entries(DESCS[data.mode]).forEach(([id, text]) => {
+      document.getElementById(id).textContent = text;
+    });
     ['s1','s2','s3'].forEach(p => {
       document.getElementById(`${p}-resp`).textContent = 'Response will appear here...';
       document.getElementById(`${p}-resp`).className   = 'resp-panel';

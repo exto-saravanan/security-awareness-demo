@@ -290,7 +290,7 @@
       <span class="vuln-tag tag-nosql">NOSQL INJECTION</span>
     </div>
     <div class="scenario-body">
-      <p class="s-desc">The login handler deserialises the request body without validating field types. Sending <code>{"$gt": ""}</code> as the password — a MongoDB comparison operator — bypasses the credential check entirely. No password needed.</p>
+      <p class="s-desc" id="s1-desc">The login handler deserialises the request body without validating field types. Sending <code>{"$gt": ""}</code> as the password — a MongoDB comparison operator — bypasses the credential check entirely. No password needed.</p>
       <div class="route-badge">POST /session/03/api/login</div>
 
       <div class="preset-btns">
@@ -327,7 +327,7 @@
       <span class="vuln-tag tag-xss">STORED XSS</span>
     </div>
     <div class="scenario-body">
-      <p class="s-desc">The comments system stores user input as-is and returns it without HTML encoding. In vulnerable mode the content is rendered via <code>innerHTML</code> — any injected script or event handler executes in the browser. In fixed mode the server HTML-encodes output before returning it.</p>
+      <p class="s-desc" id="s2-desc">The comments system stores user input as-is and returns it without HTML encoding. Any injected script or event handler in a comment executes in every visitor's browser when the page loads.</p>
       <div class="route-badge">POST /session/03/api/comments &nbsp;·&nbsp; GET /session/03/api/comments</div>
 
       <div class="preset-btns">
@@ -371,7 +371,7 @@
       <span class="vuln-tag tag-valid">INPUT VALIDATION</span>
     </div>
     <div class="scenario-body">
-      <p class="s-desc">The registration endpoint accepts whatever arrives — operator objects as usernames, negative ages, and malformed email addresses. In fixed mode, every field is validated for type, length, range, and format before processing.</p>
+      <p class="s-desc" id="s3-desc">The registration endpoint accepts whatever arrives — operator objects as usernames, negative ages, and malformed email addresses. No type, length, range, or format checks applied.</p>
       <div class="route-badge">POST /session/03/api/register</div>
 
       <div class="preset-btns">
@@ -412,6 +412,19 @@
   let s1InjectOperator = false;
   let s3InjectOperator = false;
 
+  const DESCS = {
+    vulnerable: {
+      's1-desc': 'The login handler deserialises the request body without validating field types. Sending {"$gt": ""} as the password — a MongoDB comparison operator — bypasses the credential check entirely. No password needed.',
+      's2-desc': 'The comments system stores user input as-is and returns it without HTML encoding. Any injected script or event handler in a comment executes in every visitor\'s browser when the page loads.',
+      's3-desc': 'The registration endpoint accepts whatever arrives — operator objects as usernames, negative ages, and malformed email addresses. No type, length, range, or format checks applied.',
+    },
+    fixed: {
+      's1-desc': 'Type validation enforced — the handler verifies the password field is a string before building the query. Non-string values are rejected at the boundary. Operator objects never reach the database.',
+      's2-desc': 'Output encoding enforced — the server HTML-encodes all comment content before returning it. Tags become entities and the browser renders them as literal text, not executable markup.',
+      's3-desc': 'All fields validated — type (string/number), length (username ≤ 32), range (age 1–120), and format (email pattern) checks enforced. Each failing check returns 400 with the specific fix applied.',
+    },
+  };
+
   // ── Mode ────────────────────────────────────────────────────────────────────
 
   async function toggleMode() {
@@ -423,6 +436,9 @@
     } else {
       btn.textContent = '✓ FIXED'; btn.className = 'fixed';
     }
+    Object.entries(DESCS[data.mode]).forEach(([id, text]) => {
+      document.getElementById(id).textContent = text;
+    });
     // Clear all panels
     ['s1','s2','s3'].forEach(p => {
       document.getElementById(`${p}-resp`).textContent   = 'Response will appear here...';
