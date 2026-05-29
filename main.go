@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -43,5 +44,6 @@ func main() {
 	if port == "" {
 		port = "8090"
 	}
+	fmt.Printf("Security Awareness Demo Lab → http://localhost:%s\n", port)
 	r.Run(":" + port)
 }
