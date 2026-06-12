@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session 04 — Vulnerable Components</title>
+  <style>
+    :root {
+      --navy:         #0A1428;
+      --card:         #101F3E;
+      --blue:         #1E88E5;
+      --cyan:         #00BCD4;
+      --grey:         #B0BEC5;
+      --text:         #E0E8F0;
+      --border:       #1e3a5f;
+      --dim:          #3a5a7a;
+      --green:        #43A047;
+      --red:          #EF5350;
+      --orange:       #FB8C00;
+      --purple:       #AB47BC;
+      --purple-light: #CE93D8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 2px solid var(--purple);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 16px; }
+
+    .back-btn {
+      font-size: 11px;
+      color: var(--grey);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .back-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+    .header-info .title { font-size: 14px; font-weight: 700; color: var(--purple); }
+    .header-info .sub   { font-size: 10px; color: var(--grey); margin-top: 2px; }
+
+    .mode-wrap { display: flex; align-items: center; gap: 10px; }
+    .mode-label { font-size: 11px; color: var(--grey); }
+
+    #toggle-btn {
+      padding: 8px 22px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    #toggle-btn.vulnerable { background: var(--red);   color: #fff; }
+    #toggle-btn.fixed      { background: var(--green); color: #fff; }
+
+    main { max-width: 960px; margin: 0 auto; padding: 24px 20px 40px; }
+
+    .scenario {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 18px;
+      overflow: hidden;
+    }
+
+    .scenario-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .s-num { background: var(--purple); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 12px; }
+    .s-title { font-size: 13px; font-weight: 700; }
+
+    .vuln-tag {
+      margin-left: auto;
+      font-size: 9px;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+    .tag-traversal { background: rgba(239,83,80,0.15);  color: #EF9A9A; border: 1px solid rgba(239,83,80,0.3); }
+    .tag-sca       { background: rgba(251,140,0,0.15);  color: #FFCC80; border: 1px solid rgba(251,140,0,0.3); }
+    .tag-image     { background: rgba(171,71,188,0.15); color: #CE93D8; border: 1px solid rgba(171,71,188,0.3); }
+
+    .scenario-body { padding: 16px 20px; }
+
+    .s-desc { font-size: 11.5px; color: var(--grey); line-height: 1.65; margin-bottom: 14px; }
+
+    .route-badge {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      background: rgba(171,71,188,0.06);
+      border: 1px solid rgba(171,71,188,0.25);
+      color: var(--purple-light);
+      padding: 5px 12px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      display: inline-block;
+    }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .ctrl-label { font-size: 11px; color: var(--grey); white-space: nowrap; }
+
+    .controls input {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      width: 240px;
+    }
+
+    .preset-btns { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+
+    .preset-btn {
+      font-size: 10px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--grey);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover           { border-color: var(--purple); color: var(--purple); }
+    .preset-btn.preset-safe     { border-color: rgba(67,160,71,0.4);  color: #A5D6A7; }
+    .preset-btn.preset-inject   { border-color: rgba(239,83,80,0.4);  color: #EF9A9A; }
+    .preset-btn.preset-safe.active   { background: rgba(67,160,71,0.15);  border-color: #A5D6A7; color: #A5D6A7; box-shadow: 0 0 8px rgba(67,160,71,0.4); }
+    .preset-btn.preset-inject.active { background: rgba(239,83,80,0.15);  border-color: #EF9A9A; color: #EF9A9A; box-shadow: 0 0 8px rgba(239,83,80,0.4); }
+
+    .btn-fire {
+      padding: 7px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      background: var(--purple);
+      color: #fff;
+    }
+    .btn-fire:hover { background: #9c27b0; }
+
+    .resp-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; min-height: 20px; }
+    .status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-family: 'Courier New', monospace; }
+    .status-ok    { background: rgba(67,160,71,0.2);  color: #A5D6A7; }
+    .status-err   { background: rgba(239,83,80,0.2);  color: #EF9A9A; }
+    .route-hit    { font-size: 10px; color: var(--dim); font-family: 'Courier New', monospace; }
+
+    .resp-panel {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      min-height: 56px;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      color: var(--dim);
+      font-style: italic;
+    }
+    .resp-panel.ok  { border-left: 3px solid var(--green); color: #A5D6A7; font-style: normal; }
+    .resp-panel.err { border-left: 3px solid var(--red);   color: #EF9A9A; font-style: normal; }
+
+    /* Packages area — S2 */
+    .pkg-area {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-top: 10px;
+    }
+    .pkg-area-label {
+      font-size: 10px;
+      color: var(--dim);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .pkg-area-label.warn { color: #FFCC80; }
+    .pkg-area-label.ok   { color: #A5D6A7; }
+
+    .pkg-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      flex-wrap: wrap;
+    }
+    .pkg-row:last-child { border-bottom: none; }
+    .pkg-name { color: var(--text); font-weight: 600; min-width: 100px; }
+    .pkg-ver  { color: var(--dim);  min-width: 60px; }
+    .pkg-cve-id { color: #90CAF9; }
+    .pkg-fix  { color: var(--dim); font-size: 10px; margin-left: auto; }
+    .pkg-ok-badge { color: #A5D6A7; margin-left: auto; }
+
+    .sev-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      letter-spacing: 0.5px;
+    }
+    .sev-critical { background: rgba(239,83,80,0.2);  color: #EF9A9A; border: 1px solid rgba(239,83,80,0.4); }
+    .sev-high     { background: rgba(251,140,0,0.2);  color: #FFCC80; border: 1px solid rgba(251,140,0,0.4); }
+    .sev-medium   { background: rgba(255,214,0,0.1);  color: #FFF59D; border: 1px solid rgba(255,214,0,0.3); }
+    .sev-low      { background: rgba(176,190,197,0.1);color: var(--grey); border: 1px solid var(--border); }
+    .sev-ok       { background: rgba(67,160,71,0.15); color: #A5D6A7; border: 1px solid rgba(67,160,71,0.3); }
+
+    /* Scan area — S3 */
+    .scan-area {
+      background: #070f1e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+    .scan-image-label {
+      font-size: 10px;
+      color: var(--dim);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 4px;
+    }
+    .scan-image-name {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .scan-summary {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sev-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .scan-findings-label {
+      font-size: 10px;
+      color: var(--dim);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 8px;
+    }
+    .cve-row {
+      display: grid;
+      grid-template-columns: 140px 80px 80px 1fr 80px;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+    }
+    .cve-row:last-child { border-bottom: none; }
+    .cve-id      { color: #90CAF9; font-weight: 600; }
+    .cve-pkg     { color: var(--text); }
+    .cve-summary { color: var(--grey); font-size: 10.5px; line-height: 1.4; }
+    .cve-fix     { color: var(--dim); font-size: 10px; text-align: right; }
+
+    .no-findings {
+      color: #A5D6A7;
+      font-size: 11px;
+      font-style: italic;
+      padding: 6px 0;
+    }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 10px;
+      color: var(--dim);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="/">← All Sessions</a>
+    <div class="header-info">
+      <div class="title">Session 04 — Vulnerable Components</div>
+      <div class="sub">OWASP A06 · Live Demo</div>
+    </div>
+  </div>
+  <div class="mode-wrap">
+    <span class="mode-label">Mode:</span>
+    <button id="toggle-btn" class="vulnerable" onclick="toggleMode()">⚠ VULNERABLE</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Scenario 01 — Path Traversal -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">01</span>
+      <span class="s-title">Path Traversal — Vulnerable File-Serving Library</span>
+      <span class="vuln-tag tag-traversal">PATH TRAVERSAL</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc" id="s1-desc">The file-serving library passes the path parameter directly to the lookup without sanitisation. A path like <code>../../etc/passwd</code> traverses out of the allowed directory and reaches sensitive system files — including credentials and secret keys.</p>
+      <div class="route-badge">GET /session/04/api/file?path=…</div>
+
+      <div class="preset-btns">
+        <span class="ctrl-label">Presets:</span>
+        <button class="preset-btn preset-safe"   onclick="s1Preset('safe', this)">Safe Path</button>
+        <button class="preset-btn preset-inject" onclick="s1Preset('passwd', this)">Traverse → /etc/passwd</button>
+        <button class="preset-btn preset-inject" onclick="s1Preset('secrets', this)">Traverse → secrets.env</button>
+        <button class="preset-btn preset-inject" onclick="s1Preset('db', this)">Traverse → database.yml</button>
+      </div>
+
+      <div class="controls">
+        <span class="ctrl-label">Path:</span>
+        <input type="text" id="s1-path" value="config.json">
+        <button class="btn-fire" onclick="run1()">Read File</button>
+      </div>
+
+      <div class="resp-meta" id="s1-meta">
+        <span class="status-badge" id="s1-status"></span>
+        <span class="route-hit"    id="s1-route"></span>
+      </div>
+      <div class="resp-panel" id="s1-resp">Response will appear here...</div>
+    </div>
+  </div>
+
+  <!-- Scenario 02 — Dependency Audit -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">02</span>
+      <span class="s-title">Dependency Audit — SCA Scan Simulation</span>
+      <span class="vuln-tag tag-sca">UNSCANNED DEPS</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc" id="s2-desc">No SCA tooling is configured in the pipeline. The dependency tree ships with known CVEs — including log4shell (CVSS 10.0 CRITICAL) and minimist prototype pollution (CVSS 9.8 CRITICAL) — that were never scanned or flagged before reaching production.</p>
+      <div class="route-badge">GET /session/04/api/audit</div>
+
+      <div class="controls">
+        <button class="btn-fire" onclick="run2()">Run Dependency Audit</button>
+      </div>
+
+      <div class="resp-meta" id="s2-meta">
+        <span class="status-badge" id="s2-status"></span>
+        <span class="route-hit"    id="s2-route"></span>
+      </div>
+      <div class="pkg-area" id="s2-packages" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Scenario 03 — Container Image Scan -->
+  <div class="scenario">
+    <div class="scenario-header">
+      <span class="s-num">03</span>
+      <span class="s-title">Container Image Scan — Base Image CVEs</span>
+      <span class="vuln-tag tag-image">STALE BASE IMAGE</span>
+    </div>
+    <div class="scenario-body">
+      <p class="s-desc" id="s3-desc">The base image was pulled 18 months ago and never rebuilt. Dozens of OS-level CVEs have accumulated in the image layers — three rated CRITICAL in OpenSSL alone — and every release ships them to production unchanged.</p>
+      <div class="route-badge">GET /session/04/api/scan</div>
+
+      <div class="controls">
+        <button class="btn-fire" onclick="run3()">Run Image Scan</button>
+      </div>
+
+      <div class="resp-meta" id="s3-meta">
+        <span class="status-badge" id="s3-status"></span>
+        <span class="route-hit"    id="s3-route"></span>
+      </div>
+      <div class="scan-area" id="s3-scan" style="display:none;"></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>Exto360 Engineering · Bi-Weekly Security Awareness Series · Session 04 of 8 · Demo Environment</footer>
+
+<script>
+  const BASE = '/session/04/api';
+
+  const DESCS = {
+    vulnerable: {
+      's1-desc': 'The file-serving library passes the path parameter directly to the lookup without sanitisation. A path like <code>../../etc/passwd</code> traverses out of the allowed directory and reaches sensitive system files — including credentials and secret keys.',
+      's2-desc': 'No SCA tooling is configured in the pipeline. The dependency tree ships with known CVEs — including log4shell (CVSS 10.0 CRITICAL) and minimist prototype pollution (CVSS 9.8 CRITICAL) — that were never scanned or flagged before reaching production.',
+      's3-desc': 'The base image was pulled 18 months ago and never rebuilt. Dozens of OS-level CVEs have accumulated in the image layers — three rated CRITICAL in OpenSSL alone — and every release ships them to production unchanged.',
+    },
+    fixed: {
+      's1-desc': 'The updated library validates the resolved path stays within the allowed directory boundary before returning content. Any path containing traversal sequences (<code>..</code> or <code>/</code>) is rejected at the boundary — the lookup never runs.',
+      's2-desc': 'SCA scanning runs on every build against the NVD and OSV databases. All dependencies have been updated to clean versions — any PR that introduces a new CVE fails the build immediately and is blocked from merging.',
+      's3-desc': 'Switched to <code>node:20-alpine3.18</code> — a minimal base image rebuilt weekly in CI. Only required OS packages are installed. CRITICAL and HIGH counts drop to zero; a single low-severity DoS-only CVE in expat remains.',
+    },
+  };
+
+  // ── Mode ─────────────────────────────────────────────────────────────────────
+
+  async function toggleMode() {
+    const res  = await fetch(`${BASE}/mode`, { method: 'POST' });
+    const data = await res.json();
+    const btn  = document.getElementById('toggle-btn');
+    if (data.mode === 'vulnerable') {
+      btn.textContent = '⚠ VULNERABLE'; btn.className = 'vulnerable';
+    } else {
+      btn.textContent = '✓ FIXED'; btn.className = 'fixed';
+    }
+    Object.entries(DESCS[data.mode]).forEach(([id, html]) => {
+      document.getElementById(id).innerHTML = html;
+    });
+    // Clear S1
+    document.getElementById('s1-resp').textContent   = 'Response will appear here...';
+    document.getElementById('s1-resp').className     = 'resp-panel';
+    document.getElementById('s1-status').textContent = '';
+    document.getElementById('s1-route').textContent  = '';
+    // Clear S2
+    document.getElementById('s2-packages').style.display = 'none';
+    document.getElementById('s2-packages').innerHTML = '';
+    document.getElementById('s2-status').textContent = '';
+    document.getElementById('s2-route').textContent  = '';
+    // Clear S3
+    document.getElementById('s3-scan').style.display = 'none';
+    document.getElementById('s3-scan').innerHTML = '';
+    document.getElementById('s3-status').textContent = '';
+    document.getElementById('s3-route').textContent  = '';
+  }
+
+  // ── Scenario 01 — Path Traversal ─────────────────────────────────────────────
+
+  function s1Preset(type, btn) {
+    btn.closest('.preset-btns').querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const paths = {
+      safe:    'config.json',
+      passwd:  '../../etc/passwd',
+      secrets: '../private/secrets.env',
+      db:      '../config/database.yml',
+    };
+    document.getElementById('s1-path').value = paths[type];
+  }
+
+  async function run1() {
+    const path  = document.getElementById('s1-path').value.trim();
+    const res   = await fetch(`${BASE}/file?path=${encodeURIComponent(path)}`);
+    const data  = await res.json();
+    const ok    = res.status >= 200 && res.status < 300;
+    const panel = document.getElementById('s1-resp');
+    panel.textContent = JSON.stringify(data, null, 2);
+    panel.className   = `resp-panel ${ok ? 'ok' : 'err'}`;
+    const badge = document.getElementById('s1-status');
+    badge.textContent = `HTTP ${res.status}`;
+    badge.className   = `status-badge ${ok ? 'status-ok' : 'status-err'}`;
+    document.getElementById('s1-route').textContent = `GET /session/04/api/file?path=${path}`;
+  }
+
+  // ── Scenario 02 — Dependency Audit ───────────────────────────────────────────
+
+  async function run2() {
+    const res  = await fetch(`${BASE}/audit`);
+    const data = await res.json();
+    const badge = document.getElementById('s2-status');
+    badge.textContent = `HTTP ${res.status}`;
+    badge.className   = 'status-badge status-ok';
+    document.getElementById('s2-route').textContent = 'GET /session/04/api/audit';
+
+    const area   = document.getElementById('s2-packages');
+    const pkgs   = data.packages || [];
+    const scanned = data.scanned;
+
+    const labelClass = scanned ? 'ok' : 'warn';
+    const labelText  = scanned
+      ? '✓ SCA scan complete — all dependencies checked against NVD and OSV'
+      : '⚠ No SCA scan configured — CVEs present in shipped dependency tree';
+
+    const rows = pkgs.map(p => {
+      if (p.status === 'VULNERABLE') {
+        const sevClass = (p.cvss || '').includes('CRITICAL') ? 'sev-critical' : 'sev-high';
+        return `<div class="pkg-row">
+          <span class="pkg-name">${p.name}</span>
+          <span class="pkg-ver">${p.version}</span>
+          <span class="pkg-cve-id">${p.cve || ''}</span>
+          <span class="sev-badge ${sevClass}">${p.cvss || ''}</span>
+          <span class="pkg-fix">fix: ${p.fixed_in || ''}</span>
+        </div>`;
+      } else {
+        return `<div class="pkg-row">
+          <span class="pkg-name">${p.name}</span>
+          <span class="pkg-ver">${p.version}</span>
+          <span class="sev-badge sev-ok">✓ OK</span>
+        </div>`;
+      }
+    }).join('');
+
+    area.innerHTML = `<div class="pkg-area-label ${labelClass}">${labelText}</div>${rows}`;
+    area.style.display = 'block';
+  }
+
+  // ── Scenario 03 — Container Image Scan ───────────────────────────────────────
+
+  async function run3() {
+    const res  = await fetch(`${BASE}/scan`);
+    const data = await res.json();
+    const badge = document.getElementById('s3-status');
+    badge.textContent = `HTTP ${res.status}`;
+    badge.className   = 'status-badge status-ok';
+    document.getElementById('s3-route').textContent = 'GET /session/04/api/scan';
+
+    const area     = document.getElementById('s3-scan');
+    const sum      = data.summary || {};
+    const findings = data.findings || [];
+
+    const summaryHtml = `
+      <div class="scan-image-label">Base image scanned:</div>
+      <div class="scan-image-name">${data.image}</div>
+      <div class="scan-summary">
+        <span class="sev-pill sev-critical">CRITICAL: ${sum.critical}</span>
+        <span class="sev-pill sev-high">HIGH: ${sum.high}</span>
+        <span class="sev-pill sev-medium">MEDIUM: ${sum.medium}</span>
+        <span class="sev-pill sev-low">LOW: ${sum.low}</span>
+      </div>`;
+
+    let findingsHtml = '';
+    if (findings.length === 0) {
+      findingsHtml = '<div class="no-findings">✓ No CRITICAL or HIGH findings — image is clean.</div>';
+    } else {
+      findingsHtml = `<div class="scan-findings-label">Findings (CRITICAL + HIGH shown):</div>` +
+        findings.map(f => {
+          const sevClass = f.severity === 'CRITICAL' ? 'sev-critical'
+                         : f.severity === 'HIGH'     ? 'sev-high'
+                         : f.severity === 'MEDIUM'   ? 'sev-medium' : 'sev-low';
+          return `<div class="cve-row">
+            <span class="cve-id">${f.id}</span>
+            <span class="sev-badge ${sevClass}">${f.severity}</span>
+            <span class="cve-pkg">${f.package}</span>
+            <span class="cve-summary">${f.summary}</span>
+            <span class="cve-fix">→ ${f.fixed_in}</span>
+          </div>`;
+        }).join('');
+    }
+
+    area.innerHTML = summaryHtml + findingsHtml;
+    area.style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
